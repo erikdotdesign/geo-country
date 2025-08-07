@@ -1,5 +1,7 @@
 import { useState, useEffect } from "react";
 import * as d3 from "d3-geo";
+import isoCountries from "i18n-iso-countries";
+import { continents, getCountryData } from "countries-list";
 import { geoPath, geoMercator } from "d3-geo";
 import { feature } from "topojson-client";
 import countries110m from "world-atlas/countries-110m.json";
@@ -7,11 +9,13 @@ import states10m from "us-atlas/states-10m.json";
 import counties10m from "us-atlas/counties-10m.json";
 import Select from "./Select";
 import Button from "./Button";
+import StateOptions from "./StateOptions";
 import "./App.css";
 
 const App = () => {
   const [pathData, setPathData] = useState<string | null>(null);
-  const [country, setCountry] = useState<string>("840");
+  const [continent, setContinent] = useState("");
+  const [country, setCountry] = useState<string>("");
   const [countries, setCountries] = useState([]);
   const [state, setState] = useState<string>("");
   const [states, setStates] = useState([]);
@@ -25,7 +29,8 @@ const App = () => {
     const countryList = countriesGeo
       .map((c) => ({
         id: c.id,
-        name: c.properties.name || "Unnamed"
+        name: c.properties.name || "Unnamed",
+        continent: getCountryData(isoCountries.numericToAlpha2(c.id)).continent
       }))
       .sort((a, b) => a.name.localeCompare(b.name));
     const stateList = statesGeo
@@ -43,24 +48,49 @@ const App = () => {
     setCountries(countryList);
     setStates(stateList);
     setCounties(countiesList);
-    fetch("https://ipapi.co/json/")
-      .then(res => res.json())
-      .then(data => {
-        const userCountry = data.country_name?.toLowerCase();
-        const countryMatch = countryList.find(c => c.name.toLowerCase().includes(userCountry));
+    // fetch("https://ipapi.co/json/")
+    //   .then(res => res.json())
+    //   .then(data => {
+    //     const userCountry = data.country_name?.toLowerCase();
+    //     const countryMatch = countryList.find(c => c.name.toLowerCase().includes(userCountry));
 
-        if (countryMatch) {
-          setCountry(countryMatch.id);
+    //     if (countryMatch) {
+    //       setCountry(countryMatch.id);
           
-          if (userCountry === "united states") {
-            const userState = data.region?.toLowerCase();
-            const stateMatch = stateList.find(c => c.name.toLowerCase().includes(userState));
+    //       if (userCountry === "united states") {
+    //         const userState = data.region?.toLowerCase();
+    //         const stateMatch = stateList.find(c => c.name.toLowerCase().includes(userState));
             
-            if (stateMatch) setState(stateMatch.id); 
-          }
-        }
-      })
+    //         if (stateMatch) setState(stateMatch.id); 
+    //       }
+    //     }
+    //   })
   }, []);
+
+  useEffect(() => {
+    const countriesGeo = feature(countries110m as any, countries110m.objects.countries);
+
+    if (!continent) {
+      const allContinents = countriesGeo.features;
+      setProjection({
+        type: "FeatureCollection",
+        features: allContinents
+      });
+    } else if (continent || !country) {
+      const matchingCountries = countriesGeo.features.filter(f => {
+        const alpha2 = isoCountries.numericToAlpha2(f.id);
+        const countryData = getCountryData(alpha2);
+        return countryData?.continent === continent;
+      });
+
+      if (matchingCountries.length) {
+        setProjection({
+          type: "FeatureCollection",
+          features: matchingCountries
+        });
+      }
+    }
+  }, [continent, country]);
 
   useEffect(() => {
     if (country || !state) {
@@ -96,11 +126,18 @@ const App = () => {
   }, [county]);
 
   const setProjection = (geo) => {
-    const projection = geoMercator().fitSize([302, 302], geo);
+    const projection = geoMercator().fitSize([270, 270], geo);
     const path = geoPath(projection);
     const d = path(geo);
     if (d) setPathData(d);
   }
+
+  const handleSetContinent = (e) => {
+    setContinent(e.target.value);
+    setCountry("");
+    setState("");
+    setCounty("");
+  };
 
   const handleSetCountry = (e) => {
     setCountry(e.target.value);
@@ -125,68 +162,54 @@ const App = () => {
   return (
     <main className="c-app">
       <section className="c-app__body">
-        <Select
-          label="Country"
-          value={country}
-          placeholder="-- Select a country --"
-          onChange={handleSetCountry}>
+        <div className="c-control-group">
+          <Select
+            label="Continent"
+            value={continent}
+            onChange={handleSetContinent}>
+            <option value="">All continents</option>
+            {
+              Object.keys(continents).map((key) => (
+                <option 
+                  key={key}
+                  value={key}>
+                  {continents[key]}
+                </option>
+              ))
+            }
+          </Select>
           {
-            countries.map((country) => (
-              <option 
-                key={country.id}
-                value={country.id}>
-                {country.name}
-              </option>
-            ))
-          }
-        </Select>
-        {
-          country === "840"
-          ? <div className="c-control-group">
-              <Select
-                label="State"
-                value={state}
-                placeholder="-- Select a state --"
-                onChange={handleSetState}>
-                <option value="">All states</option>
+            continent
+            ? <Select
+                label="Country"
+                value={country}
+                onChange={handleSetCountry}>
+                <option value="">All countries</option>
                 {
-                  states.map((state) => (
-                    <option 
-                      key={state.id}
-                      value={state.id}>
-                      {state.name}
-                    </option>
-                  ))
+                  countries
+                    .filter(c => c.continent === continent)
+                    .map((country) => (
+                      <option 
+                        key={country.id}
+                        value={country.id}>
+                        {country.name}
+                      </option>
+                    ))
                 }
               </Select>
-              {
-                state
-                ? <Select
-                    label="County"
-                    value={county}
-                    onChange={(e) => setCounty(e.target.value)}>
-                    <option value="">All counties</option>
-                    {
-                      counties.map((county) => {
-                        if (county.id.startsWith(state)) {
-                          return (
-                            <option 
-                              key={county.id}
-                              value={county.id}>
-                              {county.name}
-                            </option>
-                          )
-                        }
-                      })
-                    }
-                  </Select>
-                : null
-              }
-            </div>
-          : null
-        }
+            : null
+          }
+        </div>
+        <StateOptions
+          country={country}
+          state={state}
+          county={county}
+          states={states}
+          counties={counties}
+          handleSetState={handleSetState}
+          setCounty={setCounty} />
         <div className="c-app__geo-preview">
-          <svg fill="#ccc">
+          <svg>
             <path d={pathData ?? ""} />
           </svg>
         </div>
