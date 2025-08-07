@@ -111,6 +111,11 @@
   aspect-ratio: 1/1;
   overflow: hidden;
   border-radius: var(--border-radius);
+
+  svg {
+    width: 100%;
+    height: 100%;
+  }
 }
 
 .h-pointer {
