@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import * as d3 from "d3-geo";
 import isoCountries from "i18n-iso-countries";
 import { continents, getCountryData } from "countries-list";
-import { geoPath, geoMercator, geoAlbersUsa, geoConicEqualArea } from "d3-geo";
+import { geoPath, geoMercator, geoAlbersUsa } from "d3-geo";
 import { feature } from "topojson-client";
 import countries110m from "world-atlas/countries-110m.json";
 import states10m from "us-atlas/states-10m.json";
