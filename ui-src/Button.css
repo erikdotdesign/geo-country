@@ -22,6 +22,7 @@
   background: var(--color-bg-z0);
   color: var(--color-text-base);
   box-shadow: 0 0 0 1px inset var(--color-border-z0);
+  text-transform: uppercase;
 
   svg {
     fill: var(--color-text-base);

@@ -162,6 +162,9 @@ const App = () => {
   return (
     <main className="c-app">
       <section className="c-app__body">
+        <div className="c-app__logo">
+          geoshape
+        </div>
         <div className="c-control-group">
           <Select
             label="Continent"

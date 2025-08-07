@@ -1,6 +1,6 @@
 import { cleanSvgPathData, splitIntoSubpaths } from "./helpers";
 
-figma.showUI(__html__, { themeColors: true, width: 350, height: 526 + 64 });
+figma.showUI(__html__, { themeColors: true, width: 350, height: 550 + 64 });
 
 figma.ui.onmessage = (msg) => {
   if (msg.type === "create-geo-shape") {

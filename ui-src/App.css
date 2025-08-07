@@ -1,5 +1,6 @@
 :root {
   --font-family: "Mozilla Text", sans-serif;
+  --font-family-headline: "Mozilla Headline", sans-serif;
   --font-family-mono: "IBM Plex Mono", monospace;
   --border-radius: 0px;
   --control-addon-size: 40px;
@@ -97,12 +98,13 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  font-family: var(--font-family);
+  font-family: var(--font-family-headline);
   font-size: 24px;
   line-height: 32px;
   font-weight: bold;
   color: var(--color-text-base);
   padding: 8px 0 16px 0;
+  text-transform: uppercase;
 }
 
 .c-app__geo-preview {
