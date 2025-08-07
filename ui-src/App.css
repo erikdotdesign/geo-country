@@ -1,7 +1,7 @@
 :root {
-  --font-family: "Inter", sans-serif;
+  --font-family: "Mozilla Text", sans-serif;
   --font-family-mono: "IBM Plex Mono", monospace;
-  --border-radius: 8px;
+  --border-radius: 0px;
   --control-addon-size: 40px;
 }
 
@@ -111,7 +111,7 @@
   aspect-ratio: 1/1;
   border-radius: var(--border-radius);
   background: var(--color-bg-z0);
-  box-shadow: 0 0 0 1px inset var(--color-border-z0);
+  box-shadow: 0 0 0 1px inset var(--color-border-z2);
   padding: 16px;
 
   svg {

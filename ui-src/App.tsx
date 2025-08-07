@@ -130,7 +130,7 @@ const App = () => {
     const path = geoPath(projection);
     const d = path(geo);
     if (d) setPathData(d);
-  }
+  };
 
   const handleSetContinent = (e) => {
     setContinent(e.target.value);

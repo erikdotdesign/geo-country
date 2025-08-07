@@ -3,7 +3,7 @@
   flex-wrap: wrap;
   flex-direction: row;
   align-items: flex-end;
-  gap: 10px 8px;
+  gap: 10px 12px;
 
   .c-control-group {
     width: 100%;
@@ -23,6 +23,7 @@
   flex-direction: column;
   position: relative;
   gap: 16px;
+  padding-top: 8px;
 
   &.c-control--emoji {
     .c-control__input {
@@ -45,12 +46,19 @@
 }
 
 .c-control__label {
+  position: absolute;
+  top: 0;
+  left: 8px;
+  z-index: 1;
+  background: var(--color-bg-z0);
   font-family: var(--font-family);
-  color: var(--color-text-base);
+  color: var(--color-text-light);
   line-height: 16px;
-  font-size: 12px;
+  font-size: 10px;
   font-weight: bold;
-  padding: 0 12px;
+  padding: 0 4px;
+  text-transform: uppercase;
+  letter-spacing: 0.25px;
 }
 
 .c-control__input-wrap {
@@ -62,8 +70,8 @@
 .c-control__input {
   display: block;
   font-family: var(--font-family);
-  background: var(--color-bg-z1);
-  box-shadow: 0 0 0 1px inset var(--color-border-z1);
+  background: var(--color-bg-z0);
+  box-shadow: 0 0 0 1px inset var(--color-border-z2);
   line-height: 16px;
   font-size: 12px;
   width: 100%;
@@ -74,6 +82,8 @@
   color: var(--color-text-base);
   min-width: 40px;
   min-height: 40px;
+  white-space: no-wrap;
+  text-overflow: ellipsis;
 
   &.c-control__input--left {
     padding-left: var(--control-addon-size);
@@ -84,7 +94,7 @@
   }
 
   &:hover {
-    box-shadow: 0 0 0 1px inset var(--color-border-z2);
+    box-shadow: 0 0 0 1px inset var(--color-border-z3);
   }
 
   &:focus {
