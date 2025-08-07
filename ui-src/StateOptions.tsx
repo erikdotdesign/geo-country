@@ -24,7 +24,6 @@ const StateOptions = ({
         <Select
           label="State"
           value={state}
-          placeholder="-- Select a state --"
           onChange={handleSetState}>
           <option value="">All states</option>
           {

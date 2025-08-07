@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import * as d3 from "d3-geo";
 import isoCountries from "i18n-iso-countries";
 import { continents, getCountryData } from "countries-list";
-import { geoPath, geoMercator } from "d3-geo";
+import { geoPath, geoMercator, geoAlbersUsa, geoConicEqualArea } from "d3-geo";
 import { feature } from "topojson-client";
 import countries110m from "world-atlas/countries-110m.json";
 import states10m from "us-atlas/states-10m.json";
@@ -71,12 +71,11 @@ const App = () => {
     const countriesGeo = feature(countries110m as any, countries110m.objects.countries);
 
     if (!continent) {
-      const allContinents = countriesGeo.features;
       setProjection({
         type: "FeatureCollection",
-        features: allContinents
+        features: countriesGeo.features
       });
-    } else if (continent || !country) {
+    } else if (continent && !country) {
       const matchingCountries = countriesGeo.features.filter(f => {
         const alpha2 = isoCountries.numericToAlpha2(f.id);
         const countryData = getCountryData(alpha2);
@@ -93,24 +92,41 @@ const App = () => {
   }, [continent, country]);
 
   useEffect(() => {
-    if (country || !state) {
-      const geo = feature(countries110m as any, countries110m.objects.countries);
-      const selected = geo.features.find((f: any) => f.id === country);
+    if (country && !state) {
+      if (country === "840") {
+        const geo = feature(states10m as any, states10m.objects.states);
+        setProjection(geo, true);
+      } else {
+        const geo = feature(countries110m as any, countries110m.objects.countries);
+        const selected = geo.features.find((f: any) => f.id === country);
 
-      if (selected) {
-        setProjection(selected);
+        if (selected) {
+          setProjection(selected);
+        }
       }
     }
   }, [country, state]);
 
   useEffect(() => {
-    if (state || !county) {
-      const geo = feature(states10m as any, states10m.objects.states);
-      const selected = geo.features.find((f: any) => f.id === state);
+    if (state && !county) {
+      const NON_STATE_IDS = new Set([
+        "60", // American Samoa
+        "66", // Guam
+        "69", // Northern Mariana Islands
+        "72", // Puerto Rico
+        "78", // U.S. Virgin Islands
+      ]);
 
-      if (selected) {
-        setProjection(selected);
-      }
+      const countiesGeo = feature(counties10m as any, counties10m.objects.counties);
+
+      const matchingCounties = countiesGeo.features.filter(c => {
+        return c.id.startsWith(state);
+      });
+      
+      setProjection({
+        type: "FeatureCollection",
+        features: matchingCounties
+      }, !NON_STATE_IDS.has(state));
     }
   }, [state, county]);
 
@@ -125,8 +141,8 @@ const App = () => {
     }
   }, [county]);
 
-  const setProjection = (geo) => {
-    const projection = geoMercator().fitSize([270, 270], geo);
+  const setProjection = (geo, albers = false) => {
+    const projection = (albers ? geoAlbersUsa() : geoMercator()).fitSize([270, 270], geo);
     const path = geoPath(projection);
     const d = path(geo);
     if (d) setPathData(d);
