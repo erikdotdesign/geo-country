@@ -270,9 +270,20 @@ const App = () => {
   };
 
   const createGeoShape = () => {
+    const pathData = continentPathData || countryPathData || statePathData || countyPathData;
     if (pathData) {
       parent.postMessage(
-        { pluginMessage: { type: "create-geo-shape", pathData } },
+        { 
+          pluginMessage: { 
+            type: "create-geo-shape", 
+            pathData: {
+              continentPathData,
+              countryPathData,
+              statePathData,
+              countyPathData
+            }
+          } 
+        },
         "*"
       );
     }
