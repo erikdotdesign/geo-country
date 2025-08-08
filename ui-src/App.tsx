@@ -3,13 +3,15 @@ import * as d3 from "d3-geo";
 import isoCountries from "i18n-iso-countries";
 import { continents, getCountryData } from "countries-list";
 import { geoPath, geoMercator, geoAlbersUsa } from "d3-geo";
-import { feature } from "topojson-client";
+import { feature, merge } from "topojson-client";
 import countries110m from "world-atlas/countries-110m.json";
 import states10m from "us-atlas/states-10m.json";
 import counties10m from "us-atlas/counties-10m.json";
 import Select from "./Select";
 import Button from "./Button";
 import StateOptions from "./StateOptions";
+import Control from "./Control";
+import GeoPreview from "./GeoPreview";
 import "./App.css";
 
 const App = () => {
@@ -21,6 +23,17 @@ const App = () => {
   const [states, setStates] = useState([]);
   const [county, setCounty] = useState<string>("");
   const [counties, setCounties] = useState([]);
+  const [includeCountryBorders, setIncludeCountryBorders] = useState(false);
+  const [includeStateBorders, setIncludeStateBorders] = useState(false);
+  const [includeCountyBorders, setIncludeCountyBorders] = useState(false);
+  const [continentsPathData, setContinentsPathData] = useState<string | null>(null);
+  const [continentPathData, setContinentPathData] = useState<string | null>(null);
+  const [countriesPathData, setCountriesPathData] = useState<string | null>(null);
+  const [countryPathData, setCountryPathData] = useState<string | null>(null);
+  const [statesPathData, setStatesPathData] = useState<string | null>(null);
+  const [statePathData, setStatePathData] = useState<string | null>(null);
+  const [countiesPathData, setCountiesPathData] = useState<string | null>(null);
+  const [countyPathData, setCountyPathData] = useState<string | null>(null);
 
   useEffect(() => {
     const countriesGeo = feature(countries110m as any, countries110m.objects.countries).features;
@@ -67,85 +80,162 @@ const App = () => {
     //   })
   }, []);
 
+  // Continent geo
   useEffect(() => {
-    const countriesGeo = feature(countries110m as any, countries110m.objects.countries);
-
     if (!continent) {
+      // Group geometries by continent
+      const continentGroups: Record<string, any[]> = {};
+
+      countries110m.objects.countries.geometries.forEach(geom => {
+        const alpha2 = isoCountries.numericToAlpha2(geom.id);
+        const countryData = getCountryData(alpha2);
+        const cont = countryData?.continent || "Unknown";
+
+        if (!continentGroups[cont]) continentGroups[cont] = [];
+        continentGroups[cont].push(geom);
+      });
+
+      // Merge each continent into a single feature
+      const mergedContinents = Object.entries(continentGroups).map(([cont, geoms]) => ({
+        type: "Feature",
+        properties: { continent: cont },
+        geometry: merge(countries110m, geoms)
+      }));
+
       setProjection({
         type: "FeatureCollection",
-        features: countriesGeo.features
+        features: mergedContinents
       });
     } else if (continent && !country) {
-      const matchingCountries = countriesGeo.features.filter(f => {
+      const matchingCountries = countries110m.objects.countries.geometries.filter(f => {
         const alpha2 = isoCountries.numericToAlpha2(f.id);
         const countryData = getCountryData(alpha2);
         return countryData?.continent === continent;
       });
 
+      const mergedGeometry = merge(
+        countries110m,
+        matchingCountries
+      );
+
       if (matchingCountries.length) {
         setProjection({
           type: "FeatureCollection",
-          features: matchingCountries
+          features: [{
+            type: "Feature",
+            properties: { continent },
+            geometry: mergedGeometry
+          }]
         });
       }
     }
-  }, [continent, country]);
+  }, [continent, country, includeCountryBorders, includeStateBorders, includeCountyBorders]);
 
+  // Country geo
   useEffect(() => {
     if (country && !state) {
-      if (country === "840") {
-        const geo = feature(states10m as any, states10m.objects.states);
-        setProjection(geo, true);
-      } else {
-        const geo = feature(countries110m as any, countries110m.objects.countries);
-        const selected = geo.features.find((f: any) => f.id === country);
+      const ALBER_COUNTRIES = new Set([
+        "840" // USA
+      ]);
+      const geo = feature(countries110m, countries110m.objects.countries);
+      const selected = geo.features.find((f: any) => f.id === country);
 
-        if (selected) {
-          setProjection(selected);
-        }
+      if (selected) {
+        setProjection(selected, ALBER_COUNTRIES.has(country));
       }
     }
-  }, [country, state]);
+  }, [country, state, includeCountryBorders, includeStateBorders, includeCountyBorders]);
 
+  // State geo
   useEffect(() => {
     if (state && !county) {
-      const NON_STATE_IDS = new Set([
-        "60", // American Samoa
-        "66", // Guam
-        "69", // Northern Mariana Islands
-        "72", // Puerto Rico
-        "78", // U.S. Virgin Islands
+      const ALBER_STATES = new Set([
+        "02" // Alaska
       ]);
-
-      const countiesGeo = feature(counties10m as any, counties10m.objects.counties);
-
-      const matchingCounties = countiesGeo.features.filter(c => {
-        return c.id.startsWith(state);
-      });
+      const statesGeo = feature(states10m, states10m.objects.states);
+      const selected = statesGeo.features.find((f: any) => f.id === state);
       
-      setProjection({
-        type: "FeatureCollection",
-        features: matchingCounties
-      }, !NON_STATE_IDS.has(state));
+      if (selected) {
+        setProjection(selected, ALBER_STATES.has(state));
+      }
     }
-  }, [state, county]);
+  }, [state, county, includeCountryBorders, includeStateBorders, includeCountyBorders]);
 
+  // County geo
   useEffect(() => {
     if (county) {
-      const geo = feature(counties10m as any, counties10m.objects.counties);
+      const geo = feature(counties10m, counties10m.objects.counties);
       const selected = geo.features.find((f: any) => f.id === county);
 
       if (selected) {
         setProjection(selected);
       }
     }
-  }, [county]);
+  }, [county, includeCountryBorders, includeStateBorders, includeCountyBorders]);
 
   const setProjection = (geo, albers = false) => {
-    const projection = (albers ? geoAlbersUsa() : geoMercator()).fitSize([270, 270], geo);
+    let features = Array.isArray(geo.features) ? [...geo.features] : [geo];
+
+    // Add country borders if enabled and not zoomed into a single country
+    if (includeCountryBorders) {
+      const countriesGeo = feature(countries110m, countries110m.objects.countries);
+
+      if (!continent) {
+        const allCountyFeatures = countriesGeo.features;
+        features = [...features, ...allCountyFeatures];
+      } else {
+        const countryFeatures = countriesGeo.features.filter(f => {
+          const alpha2 = isoCountries.numericToAlpha2(f.id);
+          const countryData = getCountryData(alpha2);
+          return countryData?.continent === continent;
+        });
+        features = [...features, ...countryFeatures];
+      }
+    }
+
+    // Add state borders if enabled
+    if (includeStateBorders) {
+      const stateFeatures = feature(states10m, states10m.objects.states).features;
+      features = [...features, ...stateFeatures];
+    }
+
+    // Add county borders if enabled
+    if (includeCountyBorders) {
+      const countiesGeo = feature(counties10m, counties10m.objects.counties);
+      if (!state) {
+        const allCountyFeatures = countiesGeo.features;
+        features = [...features, ...allCountyFeatures];
+      } else {
+        const stateCountyFeatures = countiesGeo.features.filter((f: any) =>
+          f.id.startsWith(state)
+        );
+        features = [...features, ...stateCountyFeatures];
+      }
+    }
+
+    const collection = { type: "FeatureCollection", features };
+
+    const projection = (albers ? geoAlbersUsa() : geoMercator()).fitSize([302, 302], collection);
     const path = geoPath(projection);
-    const d = path(geo);
+    const d = path(collection);
     if (d) setPathData(d);
+  };
+
+  const resetBorders = () => {
+    setIncludeCountryBorders(false);
+    setIncludeStateBorders(false);
+    setIncludeCountyBorders(false);
+  };
+
+  const resetPathData = () => {
+    setContinentsPathData(null);
+    setContinentPathData(null);
+    setCountiesPathData(null);
+    setCountryPathData(null);
+    setStatesPathData(null);
+    setStatePathData(null);
+    setCountiesPathData(null);
+    setCountyPathData(null);
   };
 
   const handleSetContinent = (e) => {
@@ -153,17 +243,29 @@ const App = () => {
     setCountry("");
     setState("");
     setCounty("");
+    resetBorders();
+    resetPathData();
   };
 
   const handleSetCountry = (e) => {
     setCountry(e.target.value);
     setState("");
     setCounty("");
+    resetBorders();
+    resetPathData();
   };
 
   const handleSetState = (e) => {
     setState(e.target.value);
     setCounty("");
+    resetBorders();
+    resetPathData();
+  };
+
+  const handleSetCounty = (e) => {
+    setCounty(e.target.value);
+    resetBorders();
+    resetPathData();
   };
 
   const createGeoShape = () => {
@@ -175,11 +277,60 @@ const App = () => {
     }
   };
 
+  const renderBorderOptions = () => {
+    // CASE 1: No country selected
+    if (!country && !state && !county) {
+      return (
+        <Control
+          as="input"
+          type="checkbox"
+          label="Include country borders"
+          checked={includeCountryBorders}
+          onChange={(e) => setIncludeCountryBorders(e.target.checked)} />
+      );
+    }
+
+    // CASE 2: North America → USA
+    if (continent === "NA" && country === "840" && !state && !county) {
+      return (
+        <>
+          <Control
+            as="input"
+            type="checkbox"
+            label="Include state borders"
+            checked={includeStateBorders}
+            onChange={(e) => setIncludeStateBorders(e.target.checked)} />
+          <Control
+            as="input"
+            type="checkbox"
+            label="Include county borders"
+            checked={includeCountyBorders}
+            onChange={(e) => setIncludeCountyBorders(e.target.checked)} />
+        </>
+      );
+    }
+
+    // CASE 3: North America → USA → Any state
+    if (continent === "NA" && country === "840" && state && !county) {
+      return (
+        <Control
+          as="input"
+          type="checkbox"
+          label="Include county borders"
+          checked={includeCountyBorders}
+          onChange={(e) => setIncludeCountyBorders(e.target.checked)} />
+      );
+    }
+
+    // CASE 4: North America → USA → Any state → Any county → No checkboxes
+    return null;
+  };
+
   return (
     <main className="c-app">
       <section className="c-app__body">
         <div className="c-app__logo">
-          geoshape
+          geo-shape
         </div>
         <div className="c-control-group">
           <Select
@@ -225,8 +376,18 @@ const App = () => {
           county={county}
           states={states}
           counties={counties}
-          handleSetState={handleSetState}
-          setCounty={setCounty} />
+          setState={handleSetState}
+          setCounty={handleSetCounty} />
+        {renderBorderOptions()}
+        {/* <GeoPreview
+          continentsPathData={continentsPathData}
+          continentPathData={continentPathData}
+          countriesPathData={countriesPathData}
+          countryPathData={countryPathData}
+          statesPathData={statesPathData}
+          statePathData={statePathData}
+          countiesPathData={countiesPathData}
+          countyPathData={countyPathData} /> */}
         <div className="c-app__geo-preview">
           <svg>
             <path d={pathData ?? ""} />

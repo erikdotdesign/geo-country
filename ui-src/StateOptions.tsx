@@ -7,7 +7,7 @@ const StateOptions = ({
   state,
   counties,
   county,
-  handleSetState,
+  setState,
   setCounty
 }: {
   country: string;
@@ -15,8 +15,8 @@ const StateOptions = ({
   county: string;
   states: any[];
   counties: any[];
-  handleSetState: (e: any) => void;
-  setCounty: (country: string) => void;
+  setState: (e: any) => void;
+  setCounty: (e: any) => void;
 }) => {
   return (
     country === "840"
@@ -24,7 +24,7 @@ const StateOptions = ({
         <Select
           label="State"
           value={state}
-          onChange={handleSetState}>
+          onChange={setState}>
           <option value="">All states</option>
           {
             states.map((state) => (
@@ -41,7 +41,7 @@ const StateOptions = ({
           ? <Select
               label="County"
               value={county}
-              onChange={(e) => setCounty(e.target.value)}>
+              onChange={setCounty}>
               <option value="">All counties</option>
               {
                 counties

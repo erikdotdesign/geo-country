@@ -31,7 +31,7 @@ const Control = ({
   ...props
 }: ControlProps) => {
   return (
-    <label className={`c-control ${modifier ? `c-control--${modifier}` : ""} ${props.type === "file" ? `c-control--file` : ""} ${icon ? `c-control--icon` : ""}`}>
+    <label className={`c-control ${modifier ? `c-control--${modifier}` : ""} ${props.type ? `c-control--${props.type}` : ""} ${icon ? `c-control--icon` : ""}`}>
       {
         label
         ? <div className="c-control__label">
@@ -63,6 +63,11 @@ const Control = ({
               readOnly={rightReadOnly}>
               { right }
             </ControlAddon>
+          : null
+        }
+        {
+          props.type === "checkbox"
+          ? <span className="c-control__checkmark" />
           : null
         }
       </div>
