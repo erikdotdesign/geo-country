@@ -6,6 +6,7 @@ import { geoPath, geoMercator, geoAlbersUsa } from "d3-geo";
 import { feature, merge } from "topojson-client";
 import countries110m from "world-atlas/countries-110m.json";
 import states10m from "us-atlas/states-10m.json";
+import usNation10m from "us-atlas/nation-10m.json";
 import counties10m from "us-atlas/counties-10m.json";
 import Select from "./Select";
 import Button from "./Button";
@@ -13,6 +14,7 @@ import StateOptions from "./StateOptions";
 import Control from "./Control";
 import GeoPreview from "./GeoPreview";
 import "./App.css";
+import { getPathData } from "./helpers";
 
 const App = () => {
   const [pathData, setPathData] = useState<string | null>(null);
@@ -26,13 +28,9 @@ const App = () => {
   const [includeCountryBorders, setIncludeCountryBorders] = useState(false);
   const [includeStateBorders, setIncludeStateBorders] = useState(false);
   const [includeCountyBorders, setIncludeCountyBorders] = useState(false);
-  const [continentsPathData, setContinentsPathData] = useState<string | null>(null);
   const [continentPathData, setContinentPathData] = useState<string | null>(null);
-  const [countriesPathData, setCountriesPathData] = useState<string | null>(null);
   const [countryPathData, setCountryPathData] = useState<string | null>(null);
-  const [statesPathData, setStatesPathData] = useState<string | null>(null);
   const [statePathData, setStatePathData] = useState<string | null>(null);
-  const [countiesPathData, setCountiesPathData] = useState<string | null>(null);
   const [countyPathData, setCountyPathData] = useState<string | null>(null);
 
   useEffect(() => {
@@ -102,10 +100,10 @@ const App = () => {
         geometry: merge(countries110m, geoms)
       }));
 
-      setProjection({
-        type: "FeatureCollection",
-        features: mergedContinents
-      });
+      const pathData = getPathData(mergedContinents);
+
+      setContinentPathData(pathData);
+      
     } else if (continent && !country) {
       const matchingCountries = countries110m.objects.countries.geometries.filter(f => {
         const alpha2 = isoCountries.numericToAlpha2(f.id);
@@ -118,33 +116,36 @@ const App = () => {
         matchingCountries
       );
 
-      if (matchingCountries.length) {
-        setProjection({
-          type: "FeatureCollection",
-          features: [{
-            type: "Feature",
-            properties: { continent },
-            geometry: mergedGeometry
-          }]
-        });
-      }
+      const pathData = getPathData([{
+        type: "Feature",
+        properties: { continent },
+        geometry: mergedGeometry
+      }]);
+      
+      setContinentPathData(pathData);
     }
-  }, [continent, country, includeCountryBorders, includeStateBorders, includeCountyBorders]);
+  }, [continent, country]);
 
   // Country geo
   useEffect(() => {
     if (country && !state) {
-      const ALBER_COUNTRIES = new Set([
-        "840" // USA
-      ]);
-      const geo = feature(countries110m, countries110m.objects.countries);
-      const selected = geo.features.find((f: any) => f.id === country);
+      const isUsa = country === "840";
+      const countryGeo = feature(countries110m, countries110m.objects.countries);
+      const usNationGeo = feature(usNation10m, usNation10m.objects.nation);
+      
+      let featuresArray;
 
-      if (selected) {
-        setProjection(selected, ALBER_COUNTRIES.has(country));
+      if (isUsa) {
+        featuresArray = usNationGeo.features;
+      } else {
+        const selected = countryGeo.features.find((f: any) => f.id === country);
+        featuresArray = selected ? [selected] : [];
       }
+
+      const pathData = getPathData(featuresArray, isUsa);
+      setCountryPathData(pathData);
     }
-  }, [country, state, includeCountryBorders, includeStateBorders, includeCountyBorders]);
+  }, [country, state]);
 
   // State geo
   useEffect(() => {
@@ -152,74 +153,78 @@ const App = () => {
       const ALBER_STATES = new Set([
         "02" // Alaska
       ]);
+      const useAlbers = ALBER_STATES.has(state);
       const statesGeo = feature(states10m, states10m.objects.states);
       const selected = statesGeo.features.find((f: any) => f.id === state);
-      
-      if (selected) {
-        setProjection(selected, ALBER_STATES.has(state));
-      }
+      const pathData = getPathData([selected], useAlbers);
+      setStatePathData(pathData);
     }
-  }, [state, county, includeCountryBorders, includeStateBorders, includeCountyBorders]);
+  }, [state, county]);
 
   // County geo
   useEffect(() => {
     if (county) {
       const geo = feature(counties10m, counties10m.objects.counties);
       const selected = geo.features.find((f: any) => f.id === county);
-
-      if (selected) {
-        setProjection(selected);
-      }
+      const pathData = getPathData([selected]);
+      setCountyPathData(pathData);
     }
-  }, [county, includeCountryBorders, includeStateBorders, includeCountyBorders]);
+  }, [county]);
 
-  const setProjection = (geo, albers = false) => {
-    let features = Array.isArray(geo.features) ? [...geo.features] : [geo];
-
-    // Add country borders if enabled and not zoomed into a single country
+  useEffect(() => {
     if (includeCountryBorders) {
+      let features;
       const countriesGeo = feature(countries110m, countries110m.objects.countries);
 
       if (!continent) {
-        const allCountyFeatures = countriesGeo.features;
-        features = [...features, ...allCountyFeatures];
+        features = countriesGeo.features;
       } else {
-        const countryFeatures = countriesGeo.features.filter(f => {
+        features = countriesGeo.features.filter(f => {
           const alpha2 = isoCountries.numericToAlpha2(f.id);
           const countryData = getCountryData(alpha2);
           return countryData?.continent === continent;
         });
-        features = [...features, ...countryFeatures];
       }
+      const pathData = getPathData(features);
+      setCountryPathData(pathData);
+    } else {
+      setCountryPathData(null);
     }
+  }, [includeCountryBorders]);
 
-    // Add state borders if enabled
+  useEffect(() => {
     if (includeStateBorders) {
-      const stateFeatures = feature(states10m, states10m.objects.states).features;
-      features = [...features, ...stateFeatures];
+      const features = feature(states10m, states10m.objects.states).features;
+      const pathData = getPathData(features, true);
+      setStatePathData(pathData);
+    } else {
+      setStatePathData(null);
     }
+  }, [includeStateBorders]);
 
-    // Add county borders if enabled
+  useEffect(() => {
     if (includeCountyBorders) {
+      let features;
+      let useAlbers;
       const countiesGeo = feature(counties10m, counties10m.objects.counties);
       if (!state) {
-        const allCountyFeatures = countiesGeo.features;
-        features = [...features, ...allCountyFeatures];
+        useAlbers = true;
+        features = countiesGeo.features;
       } else {
-        const stateCountyFeatures = countiesGeo.features.filter((f: any) =>
+        const ALBER_STATES = new Set([
+          "02" // Alaska
+        ]);
+        useAlbers = ALBER_STATES.has(state);
+        features = countiesGeo.features.filter((f: any) =>
           f.id.startsWith(state)
-        );
-        features = [...features, ...stateCountyFeatures];
+        );;
       }
+      const pathData = getPathData(features, useAlbers);
+      setCountyPathData(pathData);
+    } else {
+      setCountyPathData(null);
     }
-
-    const collection = { type: "FeatureCollection", features };
-
-    const projection = (albers ? geoAlbersUsa() : geoMercator()).fitSize([302, 302], collection);
-    const path = geoPath(projection);
-    const d = path(collection);
-    if (d) setPathData(d);
-  };
+  }, [includeCountyBorders]);
 
   const resetBorders = () => {
     setIncludeCountryBorders(false);
@@ -228,13 +233,9 @@ const App = () => {
   };
 
   const resetPathData = () => {
-    setContinentsPathData(null);
     setContinentPathData(null);
-    setCountiesPathData(null);
     setCountryPathData(null);
-    setStatesPathData(null);
     setStatePathData(null);
-    setCountiesPathData(null);
     setCountyPathData(null);
   };
 
@@ -379,20 +380,11 @@ const App = () => {
           setState={handleSetState}
           setCounty={handleSetCounty} />
         {renderBorderOptions()}
-        {/* <GeoPreview
-          continentsPathData={continentsPathData}
+        <GeoPreview
           continentPathData={continentPathData}
-          countriesPathData={countriesPathData}
           countryPathData={countryPathData}
-          statesPathData={statesPathData}
           statePathData={statePathData}
-          countiesPathData={countiesPathData}
-          countyPathData={countyPathData} /> */}
-        <div className="c-app__geo-preview">
-          <svg>
-            <path d={pathData ?? ""} />
-          </svg>
-        </div>
+          countyPathData={countyPathData} />
       </section>
       <footer className="c-app__footer">
         <Button 
