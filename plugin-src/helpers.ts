@@ -21,7 +21,7 @@ export const splitIntoSubpaths = (path: string): string[] => {
 };
 
 export const getGeoFill = () => {
-  const bgPaint = figma.currentPage.backgrounds?.[0];
+  const bgPaint = figma.currentPage.backgrounds?.[0] as SolidPaint;
   const bgColor = bgPaint
     ? new Color("srgb", [
         bgPaint.color.r,

@@ -13,30 +13,13 @@ const Overlay = ({
 
 const GeoPreview = ({
   continentPathData,
-  countryPathData,
-  statePathData,
-  countyPathData,
-  graticulePathData,
-  includeGraticules
+  countryPathData
 }: {
   continentPathData: string | null;
   countryPathData: string | null;
-  statePathData: string | null;
-  countyPathData: string | null;
-  graticulePathData: string | null;
-  includeGraticules: boolean;
 }) => {
   return (
     <div className="c-app__geo-preview">
-      {
-        graticulePathData && includeGraticules
-        ? <Overlay 
-            pathData={graticulePathData}
-            style={{
-              fill: "none"
-            }} />
-        : null
-      }
       {
         continentPathData
         ? <Overlay pathData={continentPathData} />
@@ -45,16 +28,6 @@ const GeoPreview = ({
       {
         countryPathData
         ? <Overlay pathData={countryPathData} />
-        : null
-      }
-      {
-        statePathData
-        ? <Overlay pathData={statePathData} />
-        : null
-      }
-      {
-        countyPathData
-        ? <Overlay pathData={countyPathData} />
         : null
       }
     </div>

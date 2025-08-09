@@ -1,5 +1,5 @@
 {
-  "name": "geo-shape",
+  "name": "geo-country",
   "id": "1535257934565097912",
   "api": "1.0.0",
   "main": "dist/code.js",

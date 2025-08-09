@@ -15,6 +15,7 @@
   "license": "MIT License",
   "dependencies": {
     "@types/d3-geo": "^3.1.0",
+    "@types/topojson-client": "^3.1.5",
     "colorjs.io": "^0.5.2",
     "countries-list": "^3.1.1",
     "d3-geo": "^3.1.1",
@@ -22,7 +23,6 @@
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
     "topojson-client": "^3.1.0",
-    "us-atlas": "^3.0.1",
     "world-atlas": "^2.0.2"
   },
   "devDependencies": {

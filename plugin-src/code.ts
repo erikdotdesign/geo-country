@@ -3,7 +3,7 @@ import { cleanSvgPathData, splitIntoSubpaths, getGeoFill } from "./helpers";
 figma.showUI(__html__, { themeColors: true, width: 350, height: 550 + 64 });
 
 const createPathDataGroup = (name: string, pathData: string) => {
-  const bgPaint = figma.currentPage.backgrounds?.[0];
+  const bgPaint = figma.currentPage.backgrounds?.[0] as SolidPaint;
   const subpaths = splitIntoSubpaths(pathData);
 
   const vectors = subpaths.map(subpath => {
