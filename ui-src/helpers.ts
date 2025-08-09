@@ -4,7 +4,7 @@ import { geoPath, geoMercator } from "d3-geo";
 import isoCountries from "i18n-iso-countries";
 import { getCountryData, TCountryCode } from "countries-list";
 
-export const getPathData = (
+export const getPathGenerator = (
   features: Feature | Feature[]
 ) => {
   const normalizedFeatures = Array.isArray(features) ? features : [features];
@@ -13,8 +13,19 @@ export const getPathData = (
     features: normalizedFeatures
   };
   const projection = geoMercator().fitSize([302, 302], collection);
-  const path = geoPath(projection);
-  return path(collection);
+  return geoPath(projection);
+};
+
+export const getRelPathData = (
+  pathGenerator: any,
+  features: Feature | Feature[]
+): string => {
+  const normalizedFeatures = Array.isArray(features) ? features : [features];
+  const featureCollection: FeatureCollection = {
+    type: "FeatureCollection",
+    features: normalizedFeatures
+  };
+  return pathGenerator(featureCollection) as string;
 };
 
 export const capitalize = (str: string): string => {

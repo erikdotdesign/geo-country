@@ -4,12 +4,11 @@ import { continents, TContinentCode } from "countries-list";
 import { feature, merge } from "topojson-client";
 import countriesTopoJSON from "world-atlas/countries-110m.json";
 import { Topology, GeometryCollection } from "topojson-specification";
-import type { FeatureCollection, Geometry, GeoJsonProperties, Feature } from "geojson";
-import { getPathData, getCountryContinentCode } from "./helpers";
+import type { FeatureCollection, Feature } from "geojson";
+import { getPathGenerator, getCountryContinentCode, getRelPathData } from "./helpers";
 import Select from "./Select";
 import Button from "./Button";
 import Control from "./Control";
-import GeoPreview from "./GeoPreview";
 import "./App.css";
 
 const App = () => {
@@ -17,37 +16,37 @@ const App = () => {
   const [country, setCountry] = useState<string>("");
   const [countries, setCountries] = useState<{ id: string; name: string; continent: TContinentCode }[]>([]);
   const [includeCountryBorders, setIncludeCountryBorders] = useState<boolean>(false);
-  const [continentPathData, setContinentPathData] = useState<string | null>(null);
-  const [countryPathData, setCountryPathData] = useState<string | null>(null);
+  const [continentPathData, setContinentPathData] = useState<{name: string; pathData: string}[]>([]);
+  const [countryPathData, setCountryPathData] = useState<
+    Record<string, { name: string; pathData: string }[]>
+  >({});
 
   const topology = countriesTopoJSON as unknown as Topology<{ countries: GeometryCollection }>;
   const countryFeatures: FeatureCollection = 
     feature(topology, topology.objects.countries);
-
-  const mergeGeometries = (geometries: any[]) =>
-    merge(topology, geometries);
 
   const getGeometriesByContinent = (continentCode?: string) =>
     topology.objects.countries.geometries.filter((geom) => 
       continentCode ? getCountryContinentCode(geom.id as string) === continentCode : true
     );
 
-  const continentGeometries: Feature[] = Object.keys(continents).map((code) => ({
-    type: "Feature",
-    properties: { name: code },
-    geometry: mergeGeometries(getGeometriesByContinent(code))
-  }));
+  const continentGeometryMap: Record<string, Feature> = 
+    Object.keys(continents).reduce((acc, code) => {
+      acc[code] = {
+        type: "Feature",
+        properties: { name: continents[code as TContinentCode] },
+        geometry: merge(topology, getGeometriesByContinent(code) as any)
+      };
+      return acc;
+    }, {} as Record<string, Feature>);
 
-  const getContinentGeometry = (continentCode: string): Feature | undefined => 
-    continentGeometries.find(c => (c.properties as any).name === continentCode);
-
-  const getCountryGeometry = (countryCode: string): Feature | undefined => 
+  const getCountryFeatures = (countryCode: string): Feature | undefined => 
     countryFeatures.features.find((c: any) => c.id === countryCode);
 
-  const getCountryBorders = (continentCode?: string) => {
+  const getCountryFeaturesByContinent = (continentCode?: string) => {
     if (continentCode) {
       return countryFeatures.features.filter(f => 
-        getCountryContinentCode(f.id as string) === continent
+        getCountryContinentCode(f.id as string) === continentCode
       );
     } else {
       return countryFeatures.features;
@@ -69,19 +68,42 @@ const App = () => {
   // Handle updating path data
   useEffect(() => {
     if (country) {
-      if (continentPathData) setContinentPathData("");
-      const countryGeometry = getCountryGeometry(country) as Feature;
-      setCountryPathData(getPathData(countryGeometry));
+      if (continentPathData) setContinentPathData([]);
+      const projectionFeatures = getCountryFeatures(country) as Feature;
+      const pathGenerator = getPathGenerator(projectionFeatures);
+      const continentName = continents[continent as TContinentCode];
+      setCountryPathData({
+        [continentName]: [{
+          name: (projectionFeatures.properties as any).name,
+          pathData: getRelPathData(pathGenerator, projectionFeatures)
+        }]
+      });
     } else {
-      const geometry = continent ? getContinentGeometry(continent) as Feature : continentGeometries;
-      setContinentPathData(getPathData(geometry));
+      const projectionFeatures = continent ? [continentGeometryMap[continent]] : Object.values(continentGeometryMap);
+      const pathGenerator = getPathGenerator(projectionFeatures);
+      
+      setContinentPathData(projectionFeatures.map((pf, i) => ({
+        name: (pf.properties as any).name,
+        pathData: getRelPathData(pathGenerator, projectionFeatures[i])
+      })));
 
       if (includeCountryBorders) {
-        const countryBorders = getCountryBorders(continent);
-        setCountryPathData(getPathData(countryBorders));
+        const countryFeatures = getCountryFeaturesByContinent(continent);
+        const groupedByContinent = countryFeatures.reduce((acc, countryFeature) => {
+          const continentCode = getCountryContinentCode(countryFeature.id as string);
+          const continentName = continents[continentCode];
+          if (!acc[continentName]) acc[continentName] = [];
+          acc[continentName].push({
+            name: (countryFeature.properties as any).name,
+            pathData: getRelPathData(pathGenerator, countryFeature) as string
+          });
+          return acc;
+        }, {} as Record<string, { name: string; pathData: string }[]>);
+        setCountryPathData(groupedByContinent);
       } else {
-        setCountryPathData("");
+        setCountryPathData({});
       }
+      
     }
   }, [continent, country, includeCountryBorders]);
 
@@ -170,9 +192,24 @@ const App = () => {
               onChange={handleSetIncludeCountryBorders} />
           : null
         }
-        <GeoPreview
-          continentPathData={continentPathData}
-          countryPathData={countryPathData} />
+        <div className="c-app__geo-preview">
+          <svg>
+            {
+              continentPathData.map((v) => (
+                <path d={v.pathData} />
+              ))
+            }
+          </svg>
+          <svg>
+            {Object.entries(countryPathData).map(([continentCode, countries]) => (
+              <g key={continentCode}>
+                {countries.map((v) => (
+                  <path key={v.name} d={v.pathData} />
+                ))}
+              </g>
+            ))}
+          </svg>
+        </div>
       </section>
       <footer className="c-app__footer">
         <Button 
