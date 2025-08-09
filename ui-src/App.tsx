@@ -24,6 +24,14 @@ const App = () => {
   const topology = countriesTopoJSON as unknown as Topology<{ countries: GeometryCollection }>;
   const countryFeatures: FeatureCollection = 
     feature(topology, topology.objects.countries);
+  const patchedFeatures = countryFeatures.features.map(f => {
+    if (!f.id) {
+      if ((f.properties as any).name === "Kosovo") f.id = "XK";
+      if ((f.properties as any).name === "Somaliland") f.id = "XS";
+      if ((f.properties as any).name === "N. Cyprus") f.id = "XN";
+    }
+    return f;
+  });
 
   const getGeometriesByContinent = (continentCode?: string) =>
     topology.objects.countries.geometries.filter((geom) => 
@@ -41,22 +49,22 @@ const App = () => {
     }, {} as Record<string, Feature>);
 
   const getCountryFeatures = (countryCode: string): Feature | undefined => 
-    countryFeatures.features.find((c: any) => c.id === countryCode);
+    patchedFeatures.find((c: any) => c.id === countryCode);
 
   const getCountryFeaturesByContinent = (continentCode?: string) => {
     if (continentCode) {
-      return countryFeatures.features.filter(f => 
+      return patchedFeatures.filter(f => 
         getCountryContinentCode(f.id as string) === continentCode
       );
     } else {
-      return countryFeatures.features;
+      return patchedFeatures;
     }
   };
 
   // Build country list for selectors
   useEffect(() => {
     setCountries(
-      countryFeatures.features.map((c) => ({
+      patchedFeatures.map((c) => ({
         id: c.id as string,
         name: (c.properties as any).name || "Unnamed",
         continent: getCountryContinentCode(c.id as string)

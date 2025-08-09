@@ -32,7 +32,13 @@ export const capitalize = (str: string): string => {
   return str.charAt(0).toUpperCase() + str.slice(1).toLowerCase();
 };
 
+const customCountryContinentMap: Record<string, string> = {
+  XK: "EU", // Kosovo → Europe
+  XN: "AS", // Northern Cyprus → Asia
+  XS: "AF"  // Somaliland → Africa (though SO already exists for Somalia; Somaliland might have a custom code in your topojson)
+};
+
 export const getCountryContinentCode = (id: string) => {
   const alpha2 = isoCountries.numericToAlpha2(id) as TCountryCode;
-  return getCountryData(alpha2).continent;
+  return getCountryData(alpha2).continent || customCountryContinentMap[id];
 };
