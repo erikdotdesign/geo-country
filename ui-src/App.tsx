@@ -53,6 +53,22 @@ const App = () => {
     }
   };
 
+  // const getCountryMaxDistance = (name) => {
+  //   switch(name) {
+  //     case "United States of America":
+  //     case "Japan":
+  //     case "Russia":
+  //       return 54;
+  //     case "Australia":
+  //     case "Canada":
+  //       return 25;
+  //     case "Denmark":
+  //       return 2;
+  //     default:
+  //       return 7;
+  //   }
+  // };
+
   // Build country list for selectors
   useEffect(() => {
     parent.postMessage({ pluginMessage: { type: "load-storage", key: "cache" } }, "*");
@@ -81,8 +97,9 @@ const App = () => {
     if (country) {
       if (continentPathData.length) setContinentPathData([]);
       const projectionFeatures = getCountryFeatures(country) as Feature;
-      const filtered = filterFarPolygons([projectionFeatures]) as FeatureCollection;
-      const pathGenerator = getPathGenerator(filtered.features);
+      // const maxFilterDistance = getCountryMaxDistance((projectionFeatures.properties as any).name);
+      // const filtered = filterFarPolygons([projectionFeatures], maxFilterDistance) as FeatureCollection;
+      const pathGenerator = getPathGenerator(projectionFeatures);
       const continentName = continents[continent as TContinentCode];
       setCountryPathData({
         [continentName]: [{
@@ -92,10 +109,10 @@ const App = () => {
       });
     } else {
       const projectionFeatures = continent ? [continentGeometryMap[continent]] : Object.values(continentGeometryMap);
-      const filtered = filterFarPolygons(projectionFeatures) as FeatureCollection;
-      const pathGenerator = getPathGenerator(filtered.features);
+      // const filtered = filterFarPolygons(projectionFeatures) as FeatureCollection;
+      const pathGenerator = getPathGenerator(projectionFeatures);
 
-      setContinentPathData(filtered.features.map((pf, i) => ({
+      setContinentPathData(projectionFeatures.map((pf, i) => ({
         name: (pf.properties as any).name,
         pathData: getRelPathData(pathGenerator, projectionFeatures[i])
       })));

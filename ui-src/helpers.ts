@@ -4,6 +4,7 @@ import { geoPath, geoMercator, GeoPath } from "d3-geo";
 import isoCountries from "i18n-iso-countries";
 import { getCountryData, TCountryCode } from "countries-list";
 
+
 export const filterFarPolygons = (features: Feature[], maxDistanceDeg = 40) => {
   return {
     type: "FeatureCollection",
@@ -56,16 +57,39 @@ const isWithinDistance = (c1: [number, number], c2: [number, number], maxDistDeg
   return distDeg <= maxDistDeg;
 };
 
-export const getPathGenerator = (
-  features: Feature | Feature[]
-) => {
+export const getPathGenerator = (features: Feature | Feature[]) => {
   const normalizedFeatures = Array.isArray(features) ? features : [features];
   const collection: FeatureCollection = {
     type: "FeatureCollection",
-    features: normalizedFeatures
+    features: normalizedFeatures,
   };
-  const projection = geoMercator().fitSize([302, 302], collection);
-  return geoPath(projection);
+
+  // Determine rotation angle to shift the "cut" line
+  const firstFeature = normalizedFeatures[0] as any;
+  const continentCode = getCountryContinentCode(firstFeature.id);
+
+  let rotateLng = 0;
+
+  if (
+    firstFeature.properties.name === "Asia" ||
+    firstFeature.properties.name === "Oceania" ||
+    continentCode === "AS" ||
+    continentCode === "OC"
+  ) {
+    rotateLng = -160; // Shift cut to Atlantic for Asia/Oceania
+  } else if (
+    firstFeature.properties.name === "North America" ||
+    firstFeature.properties.name === "United States of America"
+  ) {
+    rotateLng = 160; // Shift cut to Atlantic for North America/USA
+  }
+
+  const projection = d3Geo
+    .geoMercator()
+    .rotate([rotateLng, 0])
+    .fitSize([302, 302], collection);
+
+  return d3Geo.geoPath(projection);
 };
 
 export const getRelPathData = (
