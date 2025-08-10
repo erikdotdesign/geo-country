@@ -96,3 +96,18 @@ export const getCountryContinentCode = (id: string) => {
   const alpha2 = isoCountries.numericToAlpha2(id) as TCountryCode;
   return getCountryData(alpha2).continent || customCountryContinentMap[id];
 };
+
+export const patchId = (obj: any) => {
+  if (!obj.id) {
+    switch (obj.properties.name) {
+      case "Kosovo": obj.id = "XK"; break;
+      case "Somaliland": obj.id = "XS"; break;
+      case "N. Cyprus": obj.id = "XN"; break;
+      case "Siachen Glacier": obj.id = "XZ"; break;
+      case "Indian Ocean Ter.": obj.id = "XI"; break;
+    }
+  } else if (obj.properties.name === "Ashmore and Cartier Is.") {
+    obj.id = "AX";
+  }
+  return obj;
+};

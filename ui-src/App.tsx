@@ -4,7 +4,7 @@ import { feature, merge } from "topojson-client";
 import countriesTopoJSON from "world-atlas/countries-50m.json";
 import { Topology, GeometryCollection } from "topojson-specification";
 import type { FeatureCollection, Feature } from "geojson";
-import { getPathGenerator, getCountryContinentCode, getRelPathData, filterFarPolygons } from "./helpers";
+import { getPathGenerator, getCountryContinentCode, getRelPathData, filterFarPolygons, patchId } from "./helpers";
 import Select from "./Select";
 import Button from "./Button";
 import Control from "./Control";
@@ -22,21 +22,11 @@ const App = () => {
 
   const topology = countriesTopoJSON as unknown as Topology<{ countries: GeometryCollection }>;
   const countryFeatures: FeatureCollection = feature(topology, topology.objects.countries);
-  const patchedCountryFeatures = countryFeatures.features.map(f => {
-    if (!f.id) {
-      if ((f.properties as any).name === "Kosovo") f.id = "XK";
-      if ((f.properties as any).name === "Somaliland") f.id = "XS";
-      if ((f.properties as any).name === "N. Cyprus") f.id = "XN";
-      if ((f.properties as any).name === "Siachen Glacier") f.id = "XZ";
-      if ((f.properties as any).name === "Indian Ocean Ter.") f.id = "XI";
-    } else if ((f.properties as any).name === "Ashmore and Cartier Is.") {
-      f.id = "AX";
-    }
-    return f;
-  });
+  const patchedCountryFeatures = countryFeatures.features.map(patchId) as Feature[];
+  const patchedCountryGeometries = topology.objects.countries.geometries.map(patchId) as GeometryCollection[];
 
   const getGeometriesByContinent = (continentCode?: string) =>
-    topology.objects.countries.geometries.filter((geom) => 
+    patchedCountryGeometries.filter((geom) => 
       continentCode ? getCountryContinentCode(geom.id as string) === continentCode : true
     );
 
