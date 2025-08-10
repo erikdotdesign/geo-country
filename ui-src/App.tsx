@@ -55,6 +55,17 @@ const App = () => {
 
   // Build country list for selectors
   useEffect(() => {
+    parent.postMessage({ pluginMessage: { type: "load-storage", key: "cache" } }, "*");
+    window.onmessage = (event) => {
+      const msg = event.data.pluginMessage;
+      if (msg.type === "storage-loaded") {
+        if (msg.key === "cache" && msg.value) {
+          setContinent(msg.value.continent);
+          setCountry(msg.value.country);
+          setIncludeCountryBorders(msg.value.includeCountryBorders);
+        };
+      }
+    };
     setCountries(
       patchedCountryFeatures.map((c) => ({
         id: c.id as string,
@@ -114,6 +125,13 @@ const App = () => {
         setCountryPathData({});
       }
     }
+    parent.postMessage({
+      pluginMessage: { type: "save-storage", key: "cache", value: {
+        continent,
+        country,
+        includeCountryBorders
+      }},
+    }, "*");
   }, [continent, country, includeCountryBorders]);
 
   const handleSetContinent = (e: React.ChangeEvent<HTMLSelectElement>) => {

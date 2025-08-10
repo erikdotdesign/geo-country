@@ -40,3 +40,67 @@ export const getGeoFill = () => {
     ? { r: 0, g: 0, b: 0 } 
     : { r: 1, g: 1, b: 1 };
 };
+
+export const getTargetBounds = () => {
+  const selection = figma.currentPage.selection;
+  if (selection.length > 0) {
+    let minX = Infinity;
+    let minY = Infinity;
+    let maxX = -Infinity;
+    let maxY = -Infinity;
+
+    for (const node of selection) {
+      const box = node.absoluteBoundingBox;
+      if (!box) continue;
+      if (box.x < minX) minX = box.x;
+      if (box.y < minY) minY = box.y;
+      if (box.x + box.width > maxX) maxX = box.x + box.width;
+      if (box.y + box.height > maxY) maxY = box.y + box.height;
+    }
+
+    if (minX === Infinity || minY === Infinity || maxX === -Infinity || maxY === -Infinity) {
+      // fallback if no valid bounding boxes
+      return null;
+    }
+
+    return {
+      x: minX,
+      y: minY,
+      width: maxX - minX,
+      height: maxY - minY,
+    };
+  } else {
+    // fallback to viewport bounds
+    const vw = figma.viewport.bounds.width;
+    const vh = figma.viewport.bounds.height;
+    return { x: figma.viewport.center.x - vw / 2, y: figma.viewport.center.y - vh / 2, width: vw, height: vh };
+  }
+};
+
+export const scaleAndPositionGroup = (group: GroupNode, targetBounds: {x: number, y: number, width: number, height: number}, scalePercent = 1) => {
+  const margin = 0; // optional margin in pixels
+  const maxWidth = targetBounds.width * scalePercent - margin;
+  const maxHeight = targetBounds.height * scalePercent - margin;
+
+  const scaleX = maxWidth / group.width;
+  const scaleY = maxHeight / group.height;
+
+  // Use the smaller scale to keep aspect ratio
+  const scale = Math.min(scaleX, scaleY);
+
+  // Apply scale
+  group.resize(group.width * scale, group.height * scale);
+
+  // Position group centered inside target bounds
+  group.x = targetBounds.x + (targetBounds.width - group.width) / 2;
+  group.y = targetBounds.y + (targetBounds.height - group.height) / 2;
+
+  return scale;
+};
+
+export const adjustStrokeWeights = (group: GroupNode, baseStrokeWeight = 0.5, scale = 1) => {
+  const newStrokeWeight = baseStrokeWeight * scale;
+  group.findAll(n => n.type === "VECTOR").forEach((vector) => {
+    (vector as VectorNode).strokeWeight = Math.max(newStrokeWeight, 0.1); // minimum stroke weight
+  });
+};
