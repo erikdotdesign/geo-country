@@ -1,11 +1,10 @@
 import { useState, useEffect } from "react";
-import * as d3 from "d3-geo";
 import { continents, TContinentCode } from "countries-list";
 import { feature, merge } from "topojson-client";
-import countriesTopoJSON from "world-atlas/countries-110m.json";
+import countriesTopoJSON from "world-atlas/countries-50m.json";
 import { Topology, GeometryCollection } from "topojson-specification";
 import type { FeatureCollection, Feature } from "geojson";
-import { getPathGenerator, getCountryContinentCode, getRelPathData } from "./helpers";
+import { getPathGenerator, getCountryContinentCode, getRelPathData, filterFarPolygons } from "./helpers";
 import Select from "./Select";
 import Button from "./Button";
 import Control from "./Control";
@@ -22,13 +21,16 @@ const App = () => {
   >({});
 
   const topology = countriesTopoJSON as unknown as Topology<{ countries: GeometryCollection }>;
-  const countryFeatures: FeatureCollection = 
-    feature(topology, topology.objects.countries);
-  const patchedFeatures = countryFeatures.features.map(f => {
+  const countryFeatures: FeatureCollection = feature(topology, topology.objects.countries);
+  const patchedCountryFeatures = countryFeatures.features.map(f => {
     if (!f.id) {
       if ((f.properties as any).name === "Kosovo") f.id = "XK";
       if ((f.properties as any).name === "Somaliland") f.id = "XS";
       if ((f.properties as any).name === "N. Cyprus") f.id = "XN";
+      if ((f.properties as any).name === "Siachen Glacier") f.id = "XZ";
+      if ((f.properties as any).name === "Indian Ocean Ter.") f.id = "XI";
+    } else if ((f.properties as any).name === "Ashmore and Cartier Is.") {
+      f.id = "AX";
     }
     return f;
   });
@@ -49,22 +51,22 @@ const App = () => {
     }, {} as Record<string, Feature>);
 
   const getCountryFeatures = (countryCode: string): Feature | undefined => 
-    patchedFeatures.find((c: any) => c.id === countryCode);
+    patchedCountryFeatures.find((c: any) => c.id === countryCode);
 
   const getCountryFeaturesByContinent = (continentCode?: string) => {
     if (continentCode) {
-      return patchedFeatures.filter(f => 
+      return patchedCountryFeatures.filter(f => 
         getCountryContinentCode(f.id as string) === continentCode
       );
     } else {
-      return patchedFeatures;
+      return patchedCountryFeatures;
     }
   };
 
   // Build country list for selectors
   useEffect(() => {
     setCountries(
-      patchedFeatures.map((c) => ({
+      patchedCountryFeatures.map((c) => ({
         id: c.id as string,
         name: (c.properties as any).name || "Unnamed",
         continent: getCountryContinentCode(c.id as string)
@@ -76,9 +78,10 @@ const App = () => {
   // Handle updating path data
   useEffect(() => {
     if (country) {
-      if (continentPathData) setContinentPathData([]);
+      if (continentPathData.length) setContinentPathData([]);
       const projectionFeatures = getCountryFeatures(country) as Feature;
-      const pathGenerator = getPathGenerator(projectionFeatures);
+      const filtered = filterFarPolygons([projectionFeatures]) as FeatureCollection;
+      const pathGenerator = getPathGenerator(filtered.features);
       const continentName = continents[continent as TContinentCode];
       setCountryPathData({
         [continentName]: [{
@@ -88,30 +91,38 @@ const App = () => {
       });
     } else {
       const projectionFeatures = continent ? [continentGeometryMap[continent]] : Object.values(continentGeometryMap);
-      const pathGenerator = getPathGenerator(projectionFeatures);
-      
-      setContinentPathData(projectionFeatures.map((pf, i) => ({
+      const filtered = filterFarPolygons(projectionFeatures) as FeatureCollection;
+      const pathGenerator = getPathGenerator(filtered.features);
+
+      setContinentPathData(filtered.features.map((pf, i) => ({
         name: (pf.properties as any).name,
         pathData: getRelPathData(pathGenerator, projectionFeatures[i])
       })));
 
       if (includeCountryBorders) {
         const countryFeatures = getCountryFeaturesByContinent(continent);
+
+        // Group countries by continent name
         const groupedByContinent = countryFeatures.reduce((acc, countryFeature) => {
           const continentCode = getCountryContinentCode(countryFeature.id as string);
           const continentName = continents[continentCode];
           if (!acc[continentName]) acc[continentName] = [];
           acc[continentName].push({
             name: (countryFeature.properties as any).name,
-            pathData: getRelPathData(pathGenerator, countryFeature) as string
+            pathData: getRelPathData(pathGenerator, countryFeature) as string,
           });
           return acc;
         }, {} as Record<string, { name: string; pathData: string }[]>);
+
+        // Sort each continent group alphabetically by country name
+        for (const continentName in groupedByContinent) {
+          groupedByContinent[continentName].sort((a, b) => a.name.localeCompare(b.name));
+        }
+
         setCountryPathData(groupedByContinent);
       } else {
         setCountryPathData({});
       }
-      
     }
   }, [continent, country, includeCountryBorders]);
 
@@ -134,7 +145,7 @@ const App = () => {
       parent.postMessage(
         { 
           pluginMessage: { 
-            type: "create-geo-shape", 
+            type: "create-geo-country", 
             pathData: {
               continentPathData,
               countryPathData
