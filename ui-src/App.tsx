@@ -135,11 +135,15 @@ const App = () => {
         const groupedByContinent = continentCountryFeatures.reduce((acc, countryFeature) => {
           const continentCode = getCountryContinentCode(countryFeature.id as string);
           const continentName = continents[continentCode];
-          if (!acc[continentName]) acc[continentName] = [];
-          acc[continentName].push({
-            name: (countryFeature.properties as any).name,
-            pathData: getRelPathData(pathGenerator, countryFeature) as string,
-          });
+          const pathData = getRelPathData(pathGenerator, countryFeature) as string;
+          // Only add countries with have valid pathData
+          if (pathData) {
+            if (!acc[continentName]) acc[continentName] = [];
+            acc[continentName].push({
+              name: (countryFeature.properties as any).name,
+              pathData
+            });
+          }
           return acc;
         }, {} as Record<string, { name: string; pathData: string }[]>);
 

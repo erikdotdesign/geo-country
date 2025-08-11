@@ -14,6 +14,7 @@ export const cleanSvgPathData = (d: string): string => {
 };
 
 export const splitIntoSubpaths = (path: string): string[] => {
+  if (!path) return []; // Nothing to split
   return path
     .split(/(?=M)/) // Split before every 'M' command
     .map(s => s.trim())
