@@ -104,3 +104,42 @@ export const adjustStrokeWeights = (group: GroupNode, baseStrokeWeight = 0.5, sc
     (vector as VectorNode).strokeWeight = Math.max(newStrokeWeight, 0.1); // minimum stroke weight
   });
 };
+
+export const groupAndLock = (nodes: SceneNode[], name: string): GroupNode => {
+  const group = figma.group(nodes, figma.currentPage);
+  group.lockAspectRatio();
+  group.name = name;
+  return group;
+};
+
+export const getBackgroundColor = () => {
+  const bgPaint = figma.currentPage.backgrounds?.[0] as SolidPaint | undefined;
+  return bgPaint?.color ?? { r: 1, g: 1, b: 1 };
+};
+
+export const createVectorFromPath = (pathData: string, bgColor: RGB): VectorNode => {
+  const vector = figma.createVector();
+  vector.vectorPaths = [{
+    windingRule: "NONZERO",
+    data: cleanSvgPathData(pathData),
+  }];
+  vector.fills = [{ type: "SOLID", color: getGeoFill() }];
+  vector.strokes = [{ type: "SOLID", color: bgColor }];
+  vector.strokeWeight = 0.5;
+  vector.lockAspectRatio();
+  return vector;
+};
+
+export const createPathDataGroup = ({ name, pathData }: { name: string; pathData: string }): GroupNode => {
+  const bgColor = getBackgroundColor();
+  const subpaths = splitIntoSubpaths(pathData);
+  const vectors = subpaths.map(subpath => createVectorFromPath(subpath, bgColor));
+  const group = groupAndLock(vectors, name);
+  return group;
+};
+
+export const createPathDataGroups = (groupName: string, pathDataGroups: { name: string; pathData: string }[]): GroupNode => {
+  const groups = pathDataGroups.map(createPathDataGroup);
+  const group = groupAndLock(groups, groupName);
+  return group;
+};
