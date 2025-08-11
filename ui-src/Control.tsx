@@ -66,7 +66,7 @@ const Control = ({
           : null
         }
         {
-          props.type === "checkbox"
+          props.type === "checkbox" || props.type === "radio"
           ? <span className="c-control__checkmark" />
           : null
         }

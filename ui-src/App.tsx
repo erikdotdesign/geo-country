@@ -211,12 +211,12 @@ const App = () => {
           <option 
             key={"countries110m"}
             value={"countries110m"}>
-            Low
+            {`Low (1:110m scale)`}
           </option>
           <option 
             key={"countries50m"}
             value={"countries50m"}>
-            High
+            {`High (1:50m scale)`}
           </option>
         </Select>
         <div className="c-control-group">

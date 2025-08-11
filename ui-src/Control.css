@@ -44,7 +44,8 @@
     }
   }
 
-  &.c-control--checkbox {
+  &.c-control--checkbox,
+  &.c-control--radio {
     flex-direction: row;
     align-items: center;
     justify-content: center;
@@ -123,6 +124,10 @@
   cursor: pointer;
 }
 
+.c-control--radio .c-control__checkmark {
+  border-radius: 100%;
+}
+
 .c-control__checkmark:after {
   content: "";
   position: absolute;
@@ -133,7 +138,7 @@
   display: block;
 }
 
-.c-control__checkmark:after {
+.c-control--checkbox .c-control__checkmark:after {
   left: 8.5px;
   top: 4.5px;
   width: 4px;
@@ -143,6 +148,15 @@
   -webkit-transform: rotate(45deg);
   -ms-transform: rotate(45deg);
   transform: rotate(45deg);
+}
+
+.c-control--radio .c-control__checkmark:after {
+  left: 8px;
+  top: 8px;
+  width: 8px;
+  height: 8px;
+  background: var(--color-text-lighter);
+  border-radius: 100%;
 }
 
 .c-control__input {
