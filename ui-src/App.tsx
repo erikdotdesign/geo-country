@@ -20,7 +20,7 @@ const App = () => {
   const [continent, setContinent] = useState<string>("");
   const [country, setCountry] = useState<string>("");
   const [countries, setCountries] = useState<{ id: string; name: string; continent: TContinentCode }[]>([]);
-  const [includeCountryBorders, setIncludeCountryBorders] = useState<boolean>(false);
+  const [includeCountryBorders, setIncludeCountryBorders] = useState<boolean>(true);
   const [continentPathData, setContinentPathData] = useState<{name: string; pathData: string}[]>([]);
   const [countryPathData, setCountryPathData] = useState<
     Record<string, { name: string; pathData: string }[]>
@@ -129,10 +129,10 @@ const App = () => {
       })));
 
       if (includeCountryBorders) {
-        const countryFeatures = getCountryFeaturesByContinent(continent);
+        const continentCountryFeatures = getCountryFeaturesByContinent(continent);
 
         // Group countries by continent name
-        const groupedByContinent = countryFeatures.reduce((acc, countryFeature) => {
+        const groupedByContinent = continentCountryFeatures.reduce((acc, countryFeature) => {
           const continentCode = getCountryContinentCode(countryFeature.id as string);
           const continentName = continents[continentCode];
           if (!acc[continentName]) acc[continentName] = [];
@@ -161,7 +161,7 @@ const App = () => {
         includeCountryBorders
       }},
     }, "*");
-  }, [continent, country, includeCountryBorders, dataSet]);
+  }, [continent, country, includeCountryBorders, dataSet, countryFeatures, countryGeometries]);
 
   const handleSetContinent = (e: React.ChangeEvent<HTMLSelectElement>) => {
     setContinent(e.target.value);
