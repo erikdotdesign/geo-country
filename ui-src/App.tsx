@@ -1,16 +1,22 @@
 import { useState, useEffect } from "react";
 import { continents, TContinentCode } from "countries-list";
 import { feature, merge } from "topojson-client";
-import countriesTopoJSON from "world-atlas/countries-50m.json";
+import countries50m from "world-atlas/countries-50m.json";
+import countries110m from "world-atlas/countries-110m.json";
 import { Topology, GeometryCollection } from "topojson-specification";
-import type { FeatureCollection, Feature } from "geojson";
-import { getPathGenerator, getCountryContinentCode, getRelPathData, filterFarPolygons, patchId } from "./helpers";
+import type { Feature } from "geojson";
+import { getPathGenerator, getCountryContinentCode, getRelPathData, patchId } from "./helpers";
 import Select from "./Select";
 import Button from "./Button";
 import Control from "./Control";
 import "./App.css";
 
+const TOPO_JSON: any = { countries50m, countries110m };
+
 const App = () => {
+  const [dataSet, setDataSet] = useState("countries110m");
+  const [countryFeatures, setCountryFeatures] = useState<Feature[]>([]);
+  const [countryGeometries, setCountryGeometries] = useState<GeometryCollection[]>([]);
   const [continent, setContinent] = useState<string>("");
   const [country, setCountry] = useState<string>("");
   const [countries, setCountries] = useState<{ id: string; name: string; continent: TContinentCode }[]>([]);
@@ -20,85 +26,90 @@ const App = () => {
     Record<string, { name: string; pathData: string }[]>
   >({});
 
-  const topology = countriesTopoJSON as unknown as Topology<{ countries: GeometryCollection }>;
-  const countryFeatures: FeatureCollection = feature(topology, topology.objects.countries);
-  const patchedCountryFeatures = countryFeatures.features.map(patchId) as Feature[];
-  const patchedCountryGeometries = topology.objects.countries.geometries.map(patchId) as GeometryCollection[];
+  const getPatchedCountryFeatures = (json: Topology<{ countries: GeometryCollection }>) => {
+    const countryFeatures = feature(json, json.objects.countries);
+    return countryFeatures.features.map(patchId);
+  };
+  
+  const getPatchedCountryGeometries = (json: Topology<{ countries: GeometryCollection }>) => {
+    return json.objects.countries.geometries.map(patchId);
+  };
 
   const getGeometriesByContinent = (continentCode?: string) =>
-    patchedCountryGeometries.filter((geom) => 
+    countryGeometries.filter((geom) => 
       continentCode ? getCountryContinentCode(geom.id as string) === continentCode : true
     );
 
-  const continentGeometryMap: Record<string, Feature> = 
-    Object.keys(continents).reduce((acc, code) => {
+  const getContinentGeometryMap = () => {
+    return Object.keys(continents).reduce((acc, code) => {
       acc[code] = {
         type: "Feature",
         properties: { name: continents[code as TContinentCode] },
-        geometry: merge(topology, getGeometriesByContinent(code) as any)
+        geometry: merge(TOPO_JSON[dataSet], getGeometriesByContinent(code) as any)
       };
       return acc;
     }, {} as Record<string, Feature>);
+  };
 
   const getCountryFeatures = (countryCode: string): Feature | undefined => 
-    patchedCountryFeatures.find((c: any) => c.id === countryCode);
+    countryFeatures.find((c: any) => c.id === countryCode);
 
   const getCountryFeaturesByContinent = (continentCode?: string) => {
     if (continentCode) {
-      return patchedCountryFeatures.filter(f => 
+      return countryFeatures.filter(f => 
         getCountryContinentCode(f.id as string) === continentCode
       );
     } else {
-      return patchedCountryFeatures;
+      return countryFeatures;
     }
   };
 
-  // const getCountryMaxDistance = (name) => {
-  //   switch(name) {
-  //     case "United States of America":
-  //     case "Japan":
-  //     case "Russia":
-  //       return 54;
-  //     case "Australia":
-  //     case "Canada":
-  //       return 25;
-  //     case "Denmark":
-  //       return 2;
-  //     default:
-  //       return 7;
-  //   }
-  // };
+  const handleNewDataSet = (ds: any) => {
+    const newDataSet = TOPO_JSON[ds];
+    const newCountryFeatures = getPatchedCountryFeatures(newDataSet);
+    const newCountryGeometries = getPatchedCountryGeometries(newDataSet);
+    const newCountryList = newCountryFeatures.map((c) => ({
+      id: c.id as string,
+      name: (c.properties as any).name || "Unnamed",
+      continent: getCountryContinentCode(c.id as string)
+    }))
+    .sort((a, b) => a.name.localeCompare(b.name));
+    if (!newCountryList.find((c) => c.id === country)) {
+      setCountry("");
+    }
+    setCountries(newCountryList);
+    setCountryFeatures(newCountryFeatures);
+    setCountryGeometries(newCountryGeometries);
+    setDataSet(ds);
+  };
 
-  // Build country list for selectors
+  // Load plugin cache
   useEffect(() => {
     parent.postMessage({ pluginMessage: { type: "load-storage", key: "cache" } }, "*");
     window.onmessage = (event) => {
       const msg = event.data.pluginMessage;
       if (msg.type === "storage-loaded") {
         if (msg.key === "cache" && msg.value) {
+          setDataSet(msg.value.dataSet);
           setContinent(msg.value.continent);
           setCountry(msg.value.country);
           setIncludeCountryBorders(msg.value.includeCountryBorders);
-        };
+        }
       }
     };
-    setCountries(
-      patchedCountryFeatures.map((c) => ({
-        id: c.id as string,
-        name: (c.properties as any).name || "Unnamed",
-        continent: getCountryContinentCode(c.id as string)
-      }))
-      .sort((a, b) => a.name.localeCompare(b.name))
-    );
   }, []);
+
+  // Handle updating data set
+  useEffect(() => {
+    handleNewDataSet(dataSet);
+  }, [dataSet]);
 
   // Handle updating path data
   useEffect(() => {
+    if (!countryFeatures.length || !countryGeometries.length) return;
     if (country) {
       if (continentPathData.length) setContinentPathData([]);
       const projectionFeatures = getCountryFeatures(country) as Feature;
-      // const maxFilterDistance = getCountryMaxDistance((projectionFeatures.properties as any).name);
-      // const filtered = filterFarPolygons([projectionFeatures], maxFilterDistance) as FeatureCollection;
       const pathGenerator = getPathGenerator(projectionFeatures);
       const continentName = continents[continent as TContinentCode];
       setCountryPathData({
@@ -108,8 +119,8 @@ const App = () => {
         }]
       });
     } else {
+      const continentGeometryMap = getContinentGeometryMap();
       const projectionFeatures = continent ? [continentGeometryMap[continent]] : Object.values(continentGeometryMap);
-      // const filtered = filterFarPolygons(projectionFeatures) as FeatureCollection;
       const pathGenerator = getPathGenerator(projectionFeatures);
 
       setContinentPathData(projectionFeatures.map((pf, i) => ({
@@ -144,12 +155,13 @@ const App = () => {
     }
     parent.postMessage({
       pluginMessage: { type: "save-storage", key: "cache", value: {
+        dataSet,
         continent,
         country,
         includeCountryBorders
       }},
     }, "*");
-  }, [continent, country, includeCountryBorders]);
+  }, [continent, country, includeCountryBorders, dataSet]);
 
   const handleSetContinent = (e: React.ChangeEvent<HTMLSelectElement>) => {
     setContinent(e.target.value);
@@ -162,6 +174,10 @@ const App = () => {
 
   const handleSetIncludeCountryBorders = (e: React.ChangeEvent<HTMLInputElement>) => {
     setIncludeCountryBorders(e.target.checked);
+  };
+
+  const handleSetDataSet = (e: React.ChangeEvent<HTMLSelectElement>) => {
+    handleNewDataSet(e.target.value);
   };
 
   const createGeoShape = () => {
@@ -188,6 +204,21 @@ const App = () => {
         <div className="c-app__logo">
           geo-country
         </div>
+        <Select
+          label="Detail"
+          value={dataSet}
+          onChange={handleSetDataSet}>
+          <option 
+            key={"countries110m"}
+            value={"countries110m"}>
+            Low
+          </option>
+          <option 
+            key={"countries50m"}
+            value={"countries50m"}>
+            High
+          </option>
+        </Select>
         <div className="c-control-group">
           <Select
             label="Continent"

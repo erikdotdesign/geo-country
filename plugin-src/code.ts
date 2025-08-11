@@ -1,6 +1,6 @@
 import { cleanSvgPathData, splitIntoSubpaths, getGeoFill, getTargetBounds, scaleAndPositionGroup, adjustStrokeWeights } from "./helpers";
 
-figma.showUI(__html__, { themeColors: true, width: 350, height: 542 + 64 });
+figma.showUI(__html__, { themeColors: true, width: 350, height: 606 + 64 });
 
 const createPathDataGroup = (name: string, pathDataGroups: { name: string; pathData: string }[]): GroupNode => {
   const groups = pathDataGroups.map((g) => {
