@@ -262,7 +262,7 @@ const App = () => {
           ? <Control
               as="input"
               type="checkbox"
-              label="Include country borders"
+              label="Include countries"
               checked={includeCountryBorders}
               onChange={handleSetIncludeCountryBorders} />
           : null
