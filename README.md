@@ -14,7 +14,7 @@
 - **Two Levels of Detail**
   - **Low detail** (1:110m) — faster, lighter, simpler.
   - **High detail** (1:50m) — includes small territories & microstates.
-- **Light/Dark Theme Support** — Automatically adjusts vector color for your Figma theme.
+- **Light/Dark Theme Support** — Plugin UI matches your Figma theme.
 - **Dynamic Vector Scaling** — Fits to your current selection, or to the viewport if no selection is active.
 - **Auto Contrast Fill** — Fills are chosen dynamically based on page background color for optimal visibility.
 
