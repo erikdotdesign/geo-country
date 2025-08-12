@@ -1,7 +1,7 @@
 {
-  "name": "geo-shape",
+  "name": "geo-country",
   "version": "1.0.0",
-  "description": "Your Figma Plugin",
+  "description": "World maps, your way — continents, countries, and more. Ready in Figma.",
   "main": "code.js",
   "scripts": {
     "build:main": "esbuild plugin-src/code.ts --bundle --outfile=dist/code.js --target=es2017",

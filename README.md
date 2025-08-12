@@ -1,40 +1,57 @@
-Below are the steps to get your plugin running. You can also find instructions at:
+# Geo Country
 
-  https://www.figma.com/plugin-docs/plugin-quickstart-guide/
+**geo-country** is a Figma plugin that lets you quickly insert **Mercator projection** vector maps of all the world’s continents and countries — right into your designs.
 
-This plugin template uses Typescript and NPM, two standard tools in creating JavaScript applications.
+![Screenshot](geo-country-cover.png)
 
-First, download Node.js which comes with NPM. This will allow you to install TypeScript and other
-libraries. You can find the download link here:
+## Features
 
-  https://nodejs.org/en/download/
+- **Complete Coverage** — Access every country in the world, individual continents, or a single country.
+- **Continent Country Toggle** — For continents, choose:
+  - **Continent only**
+  - **Continent + country borders**
+- **Organized Layers** — All shapes are grouped and named by continent/country for easy editing.
+- **Two Levels of Detail**
+  - **Low detail** (1:110m) — faster, lighter, simpler.
+  - **High detail** (1:50m) — includes small territories & microstates.
+- **Light/Dark Theme Support** — Automatically adjusts vector color for your Figma theme.
+- **Dynamic Vector Scaling** — Fits to your current selection, or to the viewport if no selection is active.
+- **Auto Contrast Fill** — Fills are chosen dynamically based on page background color for optimal visibility.
 
-Next, install TypeScript using the command:
+## Notes
 
-  npm install -g typescript
+- High-detail maps can include very small territories (e.g., islands or enclaves) that may be difficult to see in preview or may make the preview appear offset or smaller — this is **not a bug**.
+- Microstates and very small territories (e.g., *Vatican City*, *Monaco*) are **only included** in the high-detail vectors.
 
-Finally, in the directory of your plugin, get the latest type definitions for the plugin API by running:
+## Usage
 
-  npm install --save-dev @figma/plugin-typings
+1. Open **geo-country** in Figma.
+2. Select the **continent** or **country** you want.
+3. Choose:
+   - Detail level: **Low** or **High**
+   - For continents: toggle country borders on/off
+4. Click **Insert** — the vectors appear in your design, grouped and named.
 
-If you are familiar with JavaScript, TypeScript will look very familiar. In fact, valid JavaScript code
-is already valid Typescript code.
+## Example Use Cases
 
-TypeScript adds type annotations to variables. This allows code editors such as Visual Studio Code
-to provide information about the Figma API while you are writing code, as well as help catch bugs
-you previously didn't notice.
+- Infographics
+- Data visualization maps
+- Geography-based UI
+- Educational diagrams
+- Dashboard maps
 
-For more information, visit https://www.typescriptlang.org/
+## Dev Info
 
-Using TypeScript requires a compiler to convert TypeScript (code.ts) into JavaScript (code.js)
-for the browser to run.
+Built with:
 
-We recommend writing TypeScript code using Visual Studio code:
+- D3
+- TypeScript
+- React
+- Vite
+- colorjs.io
+- esbuild
+- Figma Plugin API
 
-1. Download Visual Studio Code if you haven't already: https://code.visualstudio.com/.
-2. Open this directory in Visual Studio Code.
-3. Compile TypeScript to JavaScript: Run the "Terminal > Run Build Task..." menu item,
-    then select "npm: watch". You will have to do this again every time
-    you reopen Visual Studio Code.
+## License
 
-That's it! Visual Studio Code will regenerate the JavaScript file every time you save.
+MIT License
