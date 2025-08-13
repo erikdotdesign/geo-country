@@ -40,6 +40,11 @@
 - Educational diagrams
 - Dashboard maps
 
+## Related Plugins
+
+- [geo-globe](https://github.com/erikdotdesign/geo-globe) – Earth globe vectors
+- [geo-usa](https://github.com/erikdotdesign/geo-usa) – USA nation/state/county vectors
+
 ## Dev Info
 
 Built with:
